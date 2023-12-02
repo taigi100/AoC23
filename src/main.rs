@@ -1,5 +1,5 @@
 use std::{fs, io};
-use std::cmp::{max, min};
+use std::cmp::{max};
 
 fn day2() -> io::Result<(usize, u32)> {
     let data = fs::read_to_string("data/day2.in").unwrap();
@@ -53,10 +53,8 @@ fn day1() {
     let mut sum = 0;
     let digits = vec!["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
     let parse_line = |line: &str| -> i32 {
-        let mut result = line.to_string();
         let parsing = |result: String, rev: bool| -> (i32, i32) {
             let mut aux = result;
-            let mut earliest: Option<(usize, usize)> = None;
             for (i, &digit) in digits.iter().enumerate() {
                 let tofind = if !rev { digit.to_string() } else { digit.chars().rev().collect::<String>() };
                 if let Some(pos) = aux.find(&tofind) {
@@ -87,6 +85,6 @@ fn day1() {
     println!("{}", sum);
 }
 fn main() -> io::Result<()> {
-    dbg!(day2());
+    dbg!(day2()?);
     Ok(())
 }
