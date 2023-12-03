@@ -1,6 +1,61 @@
 use std::{fs, io};
 use std::cmp::{max};
 
+fn day3() -> io::Result<(u32, u32)> {
+    let data = fs::read_to_string("data/day3.in").unwrap();
+    let mut p1: u32 = 0;
+    let mut p2: u32 = 0;
+    let dirx = [1, 0, -1, 0, 1, -1, 1, -1];
+    let diry = [0, 1, 0, -1, 1, 1, -1, -1];
+    let mut mat = vec![vec!['.'; 1000]; 1000];
+    let mut used = vec![vec![0; 1000]; 1000];
+    let mut lines = 0;
+    let mut cols = 0;
+    for (i, line) in data.lines().enumerate() {
+        mat[i] = line.chars().collect();
+        cols = max(cols, line.chars().collect::<Vec<char>>().len());
+        lines += 1;
+    }
+
+    for i in 0..lines {
+        for j in 0..cols {
+            if mat[i][j] == '.' || mat[i][j].is_ascii_digit()  {
+               continue;
+            }
+            let mut nums: Vec<u32> = Vec::new();
+            for k in 0..8 {
+                let x = i as i32 + dirx[k] as i32;
+                let mut y = j as i32 + diry[k] as i32;
+                if x < 0 || x >= lines as i32 || y < 0 || y >= cols as i32 {
+                    continue;
+                }
+                if mat[x as usize][y as usize].is_ascii_digit() && used[x as usize][y as usize] == 0 {
+                    println!("{}", mat[x as usize][y as usize]);
+                    while (y >= 0 && mat[x as usize][y as usize].is_ascii_digit()) {
+                        y -= 1;
+                    }
+                    println!("{}", y);
+                    y += 1;
+                    let mut num = 0;
+                    while (y < cols as i32 && mat[x as usize][y as usize].is_ascii_digit()) {
+                        num = num * 10 + mat[x as usize][y as usize].to_digit(10).unwrap() as u32;
+                        used[x as usize][y as usize] = 1;
+                        y += 1;
+                    }
+                    println!("{}", num);
+                    p1 += num;
+                    nums.push(num);
+                }
+            }
+            if mat[i][j] == '*' && nums.len() == 2 {
+                p2 += nums[0] * nums[1];
+            }
+        }
+    }
+
+    Ok((p1, p2))
+}
+
 fn day2() -> io::Result<(usize, u32)> {
     let data = fs::read_to_string("data/day2.in").unwrap();
     let mut p1 = 0;
@@ -85,6 +140,6 @@ fn day1() {
     println!("{}", sum);
 }
 fn main() -> io::Result<()> {
-    dbg!(day2()?);
+    dbg!(day3()?);
     Ok(())
 }
