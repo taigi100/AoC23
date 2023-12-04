@@ -1,6 +1,22 @@
 use std::{fs, io};
 use std::cmp::{max};
 
+fn day4() -> io::Result<(u32, u32)> {
+    let data = fs::read_to_string("data/day4.in").unwrap();
+    let (mut p1, mut p2) = (0,0);
+    let mut counts = vec![1; (data.lines().count() + 1) as usize];
+    for (i, line) in data.lines().enumerate() {
+        let card = line.split(':').nth(1).unwrap_or("").trim();
+        let winning = card.split('|').next().unwrap_or("").trim().split_whitespace().filter(|s| !s.is_empty()).collect::<Vec<&str>>();
+        let drawn = card.split('|').nth(1).unwrap_or("").trim().split_whitespace().filter(|s| !s.is_empty()).collect::<Vec<&str>>();
+        let count = winning.iter().filter(|&c| drawn.iter().any(|&d| d == *c)).count();
+        (i+1..i+1+count).take_while(|&j| j < data.lines().count()).for_each(|j| counts[j] += counts[i]);
+        p1 += if count > 0 { u32::pow(2, (count-1) as u32) } else { 0 };
+        p2 += counts[i];
+    }
+    Ok((p1, p2))
+}
+
 fn day3() -> io::Result<(u32, u32)> {
     let data = fs::read_to_string("data/day3.in").unwrap();
     let mut p1: u32 = 0;
@@ -140,6 +156,6 @@ fn day1() {
     println!("{}", sum);
 }
 fn main() -> io::Result<()> {
-    dbg!(day3()?);
+    dbg!(day4()?);
     Ok(())
 }
