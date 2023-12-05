@@ -1,6 +1,64 @@
 use std::{fs, io};
 use std::cmp::{max};
 
+fn day5() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day5.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let sections = data.split("\r\n").filter(|&str| !str.is_empty()).collect::<Vec<&str>>();
+    let seeds = sections[0].split(':').nth(1).unwrap_or("").trim().split_whitespace().map(|s| s.parse::<u64>().unwrap()).collect::<Vec<u64>>();
+    let mut counter  = -1;
+    let mut maps = Vec::new();
+    let mut i = 1;
+    while i < sections.len() {
+        if sections[i].contains("map") {
+            counter += 1;
+            i += 1;
+            continue;
+        }
+        let mut ranges = Vec::new();
+        while i < sections.len() && !sections[i].contains("map") {
+           ranges.push(sections[i].split_whitespace().map(|s| s.parse::<u64>().unwrap()).collect::<Vec<u64>>());
+            i += 1;
+        }
+        maps.push(ranges);
+        i += 1;
+    }
+
+   let mut locations = Vec::new();
+   for seed in &seeds {
+       let mut current_num = *seed;
+       for map in &maps {
+           for range in map {
+               if current_num >= range[1] && current_num <= range[1] + range[2] {
+                   current_num = range[0] + (current_num - range[1]);
+                   break;
+               }
+           }
+       }
+       locations.push(current_num);
+   }
+    i = 0;
+    let new_seeds = seeds.chunks(2).map(|ch| (ch[0]..ch[0] + ch[1])).flatten().collect::<Vec<u64>>();
+    // Not in mood to deal with range intersections and what not.
+    let mut new_locations = Vec::new();
+    let mut min_loc = u64::MAX;
+    for seed in new_seeds {
+        let mut current_num = seed;
+        for map in &maps {
+            for range in map {
+                if current_num >= range[1] && current_num < range[1] + range[2] {
+                    current_num = range[0] + (current_num - range[1]);
+                    break;
+                }
+            }
+        }
+        new_locations.push(current_num);
+    }
+    p1 = *locations.iter().min().unwrap();
+    p2 = *new_locations.iter().min().unwrap();
+    Ok((p1, p2))
+}
+
 fn day4() -> io::Result<(u32, u32)> {
     let data = fs::read_to_string("data/day4.in").unwrap();
     let (mut p1, mut p2) = (0,0);
@@ -156,6 +214,6 @@ fn day1() {
     println!("{}", sum);
 }
 fn main() -> io::Result<()> {
-    dbg!(day4()?);
+    dbg!(day5()?);
     Ok(())
 }
