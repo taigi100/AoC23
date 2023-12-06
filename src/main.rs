@@ -1,6 +1,18 @@
 use std::{fs, io};
 use std::cmp::{max};
 
+fn day6() -> io::Result<(u32, f64)> {
+    let data = fs::read_to_string("data/day6.in").unwrap();
+    let (mut p1, mut p2) = (0, 0.0);
+    let times = data.lines().next().unwrap_or("").split_whitespace().filter(|&s|  s.chars().all(|c| c.is_ascii_digit()) ).map(|s| s.parse::<f32>().unwrap()).collect::<Vec<f32>>();
+    let distances = data.lines().nth(1).unwrap_or("").split_whitespace().filter(|&s|  s.chars().all(|c| c.is_ascii_digit()) ).map(|s| s.parse::<f32>().unwrap()).collect::<Vec<f32>>();
+    p1 = times.iter().zip(distances.iter()).map(|(&t, d)| ((t + (t.powf(2.0) - 4.0 * d).sqrt()) / 2.0).ceil() - ((t - (t.powf(2.0) - 4.0 * d).sqrt()) / 2.0).floor() - 1.0).product::<f32>() as u32;
+    let newtime = data.lines().next().unwrap_or("").split_whitespace().filter(|&s|  s.chars().all(|c| c.is_ascii_digit()) ).collect::<Vec<&str>>().join("").parse::<f64>().unwrap();
+    let newdist = data.lines().nth(1).unwrap_or("").split_whitespace().filter(|&s|  s.chars().all(|c| c.is_ascii_digit()) ).collect::<Vec<&str>>().join("").parse::<f64>().unwrap();
+    let disc = (newtime.powf(2.0) - 4.0 * newdist).sqrt();
+    p2 = ((newtime + disc) / 2.0).ceil() - ((newtime - disc) / 2.0).floor() - 1.0;
+    Ok((p1, p2))
+}
 fn day5() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day5.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -41,7 +53,6 @@ fn day5() -> io::Result<(u64, u64)> {
     let new_seeds = seeds.chunks(2).map(|ch| (ch[0]..ch[0] + ch[1])).flatten().collect::<Vec<u64>>();
     // Not in mood to deal with range intersections and what not.
     let mut new_locations = Vec::new();
-    let mut min_loc = u64::MAX;
     for seed in new_seeds {
         let mut current_num = seed;
         for map in &maps {
@@ -214,6 +225,6 @@ fn day1() {
     println!("{}", sum);
 }
 fn main() -> io::Result<()> {
-    dbg!(day5()?);
+    dbg!(day6()?);
     Ok(())
 }
