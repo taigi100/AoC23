@@ -1,5 +1,70 @@
 use std::{fs, io};
-use std::cmp::{max};
+use std::cmp::{max, Ordering};
+use std::collections::HashMap;
+
+fn day7() -> io::Result<(usize, u32)> {
+    let data = fs::read_to_string("data/day7.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let mut cards = data.lines().flat_map(|line| line.split_whitespace()).collect::<Vec<&str>>().chunks(2).map(|ch| (ch[0], ch[1].parse::<u32>().unwrap())).collect::<Vec<(&str, u32)>>();
+    let getLevel = |card: &str| -> u32 {
+        let mut freq = HashMap::new();
+        card.chars().for_each(|c| *freq.entry(c).or_insert(0) += 1);
+        let mut counts = freq.values().map(|&count| count).collect::<Vec<i32>>();
+        counts.sort_unstable();
+
+        match counts.as_slice() {
+            [5] => 6, // five of a kind
+            [1, 4] => 5, // four of a kind
+            [2, 3] => 4, // FH
+            [1, 1, 3] => 3, // three of a kind
+            [1, 2, 2] => 2, // two pair
+            [1, 1, 1, 2] => 1, // one pair
+            _ => 0,
+        }
+    };
+    let cardToNum = |card: &char| -> u32 {
+        match card {
+            'A' => 14,
+            'K' => 13,
+            'Q' => 12,
+            'J' => 11,
+            'T' => 10,
+            '9' => 9,
+            '8' => 8,
+            '7' => 7,
+            '6' => 6,
+            '5' => 5,
+            '4' => 4,
+            '3' => 3,
+            '2' => 2,
+            '1' => 1,
+            _ => 0,
+        }
+    };
+    cards.sort_by(|a, b| {
+    let a_level = getLevel(a.0);
+    let b_level = getLevel(b.0);
+        if (a_level == b_level) {
+            for (a, b) in a.0.chars().zip(b.0.chars()) {
+               if (cardToNum(&a) > cardToNum(&b)) {
+                   return Ordering::Greater;
+               }
+               else if (cardToNum(&a) < cardToNum(&b)) {
+                   return Ordering::Less;
+               }
+            }
+            return Ordering::Equal;
+        } else {
+            a_level.cmp(&b_level)
+        }
+    });
+    for (i, card) in cards.iter().enumerate() {
+       p1 += (i + 1) * card.1 as usize;
+    }
+
+    println!("{:?}", cards);
+    Ok((p1, p2))
+}
 
 fn day6() -> io::Result<(u32, f64)> {
     let data = fs::read_to_string("data/day6.in").unwrap();
@@ -225,6 +290,6 @@ fn day1() {
     println!("{}", sum);
 }
 fn main() -> io::Result<()> {
-    dbg!(day6()?);
+    dbg!(day7()?);
     Ok(())
 }
