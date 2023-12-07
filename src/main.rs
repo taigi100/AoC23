@@ -2,23 +2,23 @@ use std::{fs, io};
 use std::cmp::{max, Ordering};
 use std::collections::HashMap;
 
-fn day7() -> io::Result<(usize, u32)> {
+fn day7() -> io::Result<(usize, usize)> {
     let data = fs::read_to_string("data/day7.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
     let mut cards = data.lines().flat_map(|line| line.split_whitespace()).collect::<Vec<&str>>().chunks(2).map(|ch| (ch[0], ch[1].parse::<u32>().unwrap())).collect::<Vec<(&str, u32)>>();
     let getLevel = |card: &str| -> u32 {
         let mut freq = HashMap::new();
         card.chars().for_each(|c| *freq.entry(c).or_insert(0) += 1);
-        let mut counts = freq.values().map(|&count| count).collect::<Vec<i32>>();
+        let Js = *freq.get(&'J').unwrap_or(&0);
+        let mut counts = freq.iter().filter(|&(&key,_)| key != 'J').map(|(_,&count)| count).collect::<Vec<i32>>();
         counts.sort_unstable();
-
-        match counts.as_slice() {
-            [5] => 6, // five of a kind
-            [1, 4] => 5, // four of a kind
-            [2, 3] => 4, // FH
-            [1, 1, 3] => 3, // three of a kind
-            [1, 2, 2] => 2, // two pair
-            [1, 1, 1, 2] => 1, // one pair
+        match (counts.as_slice(), Js) {
+            ([5],0) | ([4], 1) | ([3], 2) | ([2], 3) | ([1], 4) | ([], 5) => 6, // five of a kind
+            ([1, 4], 0) | ([1, 3], 1) | ([1, 2], 2)  | ([1, 1], 3)  => 5, // four of a kind
+            ([2, 3], 0) | ([2,2], 1) => 4, // FH
+            ([1, 1, 3], 0) | ([1, 1, 2], 1) | ([1, 1, 1], 2) => 3, // three of a kind
+            ([1, 2, 2], 0) => 2, // two pair
+            ([1, 1, 1, 2], 0) | ([1, 1, 1, 1], 1) => 1, // one pair
             _ => 0,
         }
     };
@@ -27,7 +27,7 @@ fn day7() -> io::Result<(usize, u32)> {
             'A' => 14,
             'K' => 13,
             'Q' => 12,
-            'J' => 11,
+            'J' => 1,
             'T' => 10,
             '9' => 9,
             '8' => 8,
@@ -59,10 +59,9 @@ fn day7() -> io::Result<(usize, u32)> {
         }
     });
     for (i, card) in cards.iter().enumerate() {
-       p1 += (i + 1) * card.1 as usize;
+       p2 += (i + 1) * card.1 as usize;
     }
 
-    println!("{:?}", cards);
     Ok((p1, p2))
 }
 
