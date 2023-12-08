@@ -1,8 +1,82 @@
 use std::{fs, io};
 use std::cmp::{max, Ordering};
 use std::collections::HashMap;
+fn gcd(mut a: usize, mut b: usize) -> usize {
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
+}
 
-fn day7() -> io::Result<(usize, usize)> {
+fn lcm(a: usize, b: usize) -> usize {
+    a / gcd(a, b) * b // Ensure there's no integer overflow
+}
+
+fn lcm_of_vec(numbers: &[usize]) -> usize {
+    numbers.iter().cloned().fold(1, |acc, num| lcm(acc, num))
+}
+fn day8() -> io::Result<(usize, usize)> {
+    let data = fs::read_to_string("data/day8.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let mut graph: HashMap<String, (String, String)> = HashMap::new();
+    let moves = data.lines().next().unwrap();
+    println!("moves: {:?}", moves);
+    for line in data.lines().skip(2) {
+        let origin = line.split_whitespace().nth(0).unwrap_or("");
+        let dest = line.split("=").nth(1).unwrap_or("").trim().chars().filter(|c| *c != '(' && *c != ')').collect::<String>().split(",").map(|e| e.trim().to_string()).collect::<Vec<String>>().chunks(2).map(|ch| (ch[0].to_string(), ch[1].to_string() )).collect::<Vec<(String, String)>>();
+        if let Some(actual_dest) = dest.get(0) {
+            graph.entry(origin.to_string()).or_insert(actual_dest.clone());
+        }
+        // println!("{} -> {:?}", origin, dest);
+    }
+    let mut current = "AAA";
+    if graph.contains_key(current) {
+        while current != "ZZZ" {
+            for c in moves.chars() {
+                // println!("current: {:?}", current);
+                if current == "ZZZ" {
+                    break;
+                }
+                if c == 'L' {
+                    current = graph[current].0.as_str();
+                } else {
+                    current = graph[current].1.as_str();
+                }
+                p1 += 1;
+            }
+        }
+    }
+
+    let mut currents = graph.iter().filter(|(k, _)| k.ends_with("A")).map(|(k, _)| k.clone()).collect::<Vec<String>>();
+    // println!("currents len: {:?}", currents.len());
+    let mut durations = Vec::new();
+    for (i, crt) in currents.iter().enumerate() {
+        // println!("i: {:?}, crt: {:?}", i, crt);
+        let mut curr = crt.clone();
+        let mut num_moves = 0;
+        while !curr.ends_with("Z") {
+            for c in moves.chars() {
+                println!("curr: {:?}", curr);
+                if curr.ends_with("Z") {
+                    break;
+                }
+                if c == 'L' {
+                    curr = graph[&curr].0.clone();
+                } else {
+                    curr = graph[&curr].1.clone();
+                }
+                num_moves += 1;
+            }
+        }
+        durations.push(num_moves);
+    }
+
+    p2 = lcm_of_vec(&durations);
+    Ok((p1, p2))
+}
+    fn day7() -> io::Result<(usize, usize)> {
     let data = fs::read_to_string("data/day7.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
     let mut cards = data.lines().flat_map(|line| line.split_whitespace()).collect::<Vec<&str>>().chunks(2).map(|ch| (ch[0], ch[1].parse::<u32>().unwrap())).collect::<Vec<(&str, u32)>>();
@@ -289,6 +363,6 @@ fn day1() {
     println!("{}", sum);
 }
 fn main() -> io::Result<()> {
-    dbg!(day7()?);
+    dbg!(day8()?);
     Ok(())
 }
