@@ -5,6 +5,33 @@ use std::time::Instant;
 use itertools::Itertools;
 use num::integer;
 
+fn day9() -> io::Result<(i32, i32)> {
+    let data = fs::read_to_string("data/day9.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let values = data.lines().map(|line| line.split(' ').map(|x| x.parse::<i32>().unwrap()).collect::<Vec<_>>()).collect::<Vec<_>>();
+
+    fn triangles(mut nums: Vec<i32>) -> (i32, i32) {
+        if nums.iter().all(|&x| x == 0) {
+            nums.push(0);
+            nums.push(0);
+            return (0, 0);
+        }
+        let mut new_nums = Vec::new();
+        for i in 0..nums.len() - 1 {
+           new_nums.push(nums[i+1] - nums[i]);
+        }
+        let (left, right) = triangles(new_nums);
+        nums.push(nums[nums.len() - 1] + right);
+        nums.insert(0, nums[0] - left);
+        return (nums[0], nums[nums.len()-1]);
+    }
+    for value in &values {
+        p1 += triangles(value.clone()).1;
+        p2 += triangles(value.clone()).0;
+    }
+    println!("{:?}", values);
+    Ok((p1, p2))
+}
 fn day8() -> io::Result<(usize, usize)> {
     let data = fs::read_to_string("data/day8.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -327,7 +354,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day8()?);
+    dbg!(day9()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
