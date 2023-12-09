@@ -51,7 +51,7 @@ fn day8() -> io::Result<(usize, usize)> {
     }
 
     let mut durations = Vec::new();
-    for (origin, (left, right)) in graph.iter().filter(|(k, _)| k.ends_with("A")) {
+    for (origin, _) in graph.iter().filter(|(k, _)| k.ends_with("A")) {
         // println!("i: {:?}, crt: {:?}", i, crt);
         let mut node = origin;
         let mut num_moves = 0;
@@ -70,13 +70,13 @@ fn day8() -> io::Result<(usize, usize)> {
     let data = fs::read_to_string("data/day7.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
     let mut cards = data.lines().flat_map(|line| line.split_whitespace()).collect::<Vec<&str>>().chunks(2).map(|ch| (ch[0], ch[1].parse::<u32>().unwrap())).collect::<Vec<(&str, u32)>>();
-    let getLevel = |card: &str| -> u32 {
+    let get_level = |card: &str| -> u32 {
         let mut freq = HashMap::new();
         card.chars().for_each(|c| *freq.entry(c).or_insert(0) += 1);
-        let Js = *freq.get(&'J').unwrap_or(&0);
+        let js = *freq.get(&'J').unwrap_or(&0);
         let mut counts = freq.iter().filter(|&(&key,_)| key != 'J').map(|(_,&count)| count).collect::<Vec<i32>>();
         counts.sort_unstable();
-        match (counts.as_slice(), Js) {
+        match (counts.as_slice(), js) {
             ([5],0) | ([4], 1) | ([3], 2) | ([2], 3) | ([1], 4) | ([], 5) => 6, // five of a kind
             ([1, 4], 0) | ([1, 3], 1) | ([1, 2], 2)  | ([1, 1], 3)  => 5, // four of a kind
             ([2, 3], 0) | ([2,2], 1) => 4, // FH
@@ -86,7 +86,7 @@ fn day8() -> io::Result<(usize, usize)> {
             _ => 0,
         }
     };
-    let cardToNum = |card: &char| -> u32 {
+    let card_to_num = |card: &char| -> u32 {
         match card {
             'A' => 14,
             'K' => 13,
@@ -106,14 +106,14 @@ fn day8() -> io::Result<(usize, usize)> {
         }
     };
     cards.sort_by(|a, b| {
-    let a_level = getLevel(a.0);
-    let b_level = getLevel(b.0);
-        if (a_level == b_level) {
+    let a_level = get_level(a.0);
+    let b_level = get_level(b.0);
+        if a_level == b_level {
             for (a, b) in a.0.chars().zip(b.0.chars()) {
-               if (cardToNum(&a) > cardToNum(&b)) {
+               if card_to_num(&a) > card_to_num(&b) {
                    return Ordering::Greater;
                }
-               else if (cardToNum(&a) < cardToNum(&b)) {
+               else if card_to_num(&a) < card_to_num(&b) {
                    return Ordering::Less;
                }
             }
@@ -178,7 +178,7 @@ fn day5() -> io::Result<(u64, u64)> {
        locations.push(current_num);
    }
     i = 0;
-    let new_seeds = seeds.chunks(2).map(|ch| (ch[0]..ch[0] + ch[1])).flatten().collect::<Vec<u64>>();
+    let new_seeds = seeds.chunks(2).map(|ch| ch[0]..ch[0] + ch[1]).flatten().collect::<Vec<u64>>();
     // Not in mood to deal with range intersections and what not.
     let mut new_locations = Vec::new();
     for seed in new_seeds {
@@ -201,7 +201,7 @@ fn day5() -> io::Result<(u64, u64)> {
 fn day4() -> io::Result<(u32, u32)> {
     let data = fs::read_to_string("data/day4.in").unwrap();
     let (mut p1, mut p2) = (0,0);
-    let mut counts = vec![1; (data.lines().count() + 1) as usize];
+    let mut counts = vec![1; data.lines().count() + 1];
     for (i, line) in data.lines().enumerate() {
         let card = line.split(':').nth(1).unwrap_or("").trim();
         let winning = card.split('|').next().unwrap_or("").trim().split_whitespace().filter(|s| !s.is_empty()).collect::<Vec<&str>>();
@@ -237,21 +237,21 @@ fn day3() -> io::Result<(u32, u32)> {
             }
             let mut nums: Vec<u32> = Vec::new();
             for k in 0..8 {
-                let x = i as i32 + dirx[k] as i32;
-                let mut y = j as i32 + diry[k] as i32;
+                let x = i as i32 + dirx[k];
+                let mut y = j as i32 + diry[k];
                 if x < 0 || x >= lines as i32 || y < 0 || y >= cols as i32 {
                     continue;
                 }
                 if mat[x as usize][y as usize].is_ascii_digit() && used[x as usize][y as usize] == 0 {
                     println!("{}", mat[x as usize][y as usize]);
-                    while (y >= 0 && mat[x as usize][y as usize].is_ascii_digit()) {
+                    while y >= 0 && mat[x as usize][y as usize].is_ascii_digit() {
                         y -= 1;
                     }
                     println!("{}", y);
                     y += 1;
                     let mut num = 0;
-                    while (y < cols as i32 && mat[x as usize][y as usize].is_ascii_digit()) {
-                        num = num * 10 + mat[x as usize][y as usize].to_digit(10).unwrap() as u32;
+                    while y < cols as i32 && mat[x as usize][y as usize].is_ascii_digit() {
+                        num = num * 10 + mat[x as usize][y as usize].to_digit(10).unwrap();
                         used[x as usize][y as usize] = 1;
                         y += 1;
                     }
