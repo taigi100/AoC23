@@ -1,9 +1,136 @@
 use itertools::Itertools;
 use num::integer;
 use std::cmp::{max, Ordering};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
+
+fn day10() -> io::Result<(i32, i32)> {
+    let data = fs::read_to_string("data/day10.in").unwrap();
+    let dirs: Vec<(i32, i32)> = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
+    let mut mat = vec![vec!['.'; 1000]; 1000];
+    let mut dist = vec![vec![u32::MAX; 1000]; 1000];
+    let mut lines = 0;
+    let mut cols = 0;
+    for (i, line) in data.lines().enumerate() {
+        mat[i] = line.chars().collect();
+        cols = max(cols, line.chars().collect::<Vec<char>>().len());
+        lines += 1;
+    }
+    fn connected(start: (usize, usize), end: (usize, usize), mat: &Vec<Vec<char>>) -> bool {
+        let mut res = false;
+        if (start.0 == end.0) {
+            let (left, right) = if start.1 < end.1 {
+                (start, end)
+            } else {
+                (end, start)
+            };
+            if ['-', 'L', 'F', 'S'].contains(&mat[left.0][left.1])
+                && ['-', 'J', '7', 'S'].contains(&mat[right.0][right.1])
+            {
+                res = true;
+            }
+        } else if (start.1 == end.1) {
+            let (bottom, top) = if start.0 > end.0 {
+                (start, end)
+            } else {
+                (end, start)
+            };
+            if ['|', '7', 'F', 'S'].contains(&mat[top.0][top.1])
+                && ['|', 'L', 'J', 'S'].contains(&mat[bottom.0][bottom.1])
+            {
+                res = true;
+            }
+        }
+        println!(
+            "start({:?}, {:?}): {:?}, end({:?}, {:?}): {:?} -> {:?}",
+            start.0, start.1, mat[start.0][start.1], end.0, end.1, mat[end.0][end.1], res
+        );
+        return res;
+    };
+    let mut node = (0, 0);
+    for i in 0..lines {
+        for j in 0..cols {
+            if mat[i][j] == 'S' {
+                node = (i, j);
+            }
+        }
+    }
+
+    dist[node.0][node.1] = 0;
+    let mut queue = VecDeque::new();
+    let mut max_dist = 0;
+    queue.push_back((node.0, node.1));
+    while !queue.is_empty() {
+        node = queue.pop_front().unwrap();
+        for k in 0..dirs.len() {
+            let (x, y) = (
+                (node.0 as i32 + dirs[k].0) as usize,
+                (node.1 as i32 + dirs[k].1) as usize,
+            );
+            if x < 0 || x >= lines || y < 0 || y >= cols {
+                continue;
+            }
+            if mat[x][y] == '.' || dist[x][y] != u32::MAX {
+                continue;
+            }
+            if connected((node.0, node.1), (x, y), &mat) {
+                dist[x][y] = dist[node.0][node.1] + 1;
+                if dist[x][y] > max_dist {
+                    max_dist = dist[x][y];
+                }
+                queue.push_back((x, y));
+            }
+        }
+    }
+    for i in 0..lines {
+        for j in 0..cols {
+            if dist[i][j] == u32::MAX {
+                mat[i][j] = '.';
+            }
+            print!("{}", mat[i][j]);
+        }
+        println!();
+    }
+
+    let mut inside = 0;
+    let mut parity = 0;
+    let mut start_pattern = '~';
+    for i in 0..lines {
+        parity = 0;
+        for j in 0..cols {
+            if mat[i][j] == '-' {
+                continue;
+            }
+            if mat[i][j] == 'F' || mat[i][j] == 'L' {
+                start_pattern = mat[i][j];
+                continue;
+            }
+            if start_pattern != '~' {
+                if start_pattern == 'F' && mat[i][j] == 'J' {
+                    parity += 1;
+                } else if start_pattern == 'L' && mat[i][j] == '7' {
+                    parity += 1;
+                }
+                start_pattern = '~';
+                continue;
+            }
+            if mat[i][j] == '|' {
+                parity += 1;
+            }
+            if mat[i][j] == '.' && parity % 2 == 1 {
+                inside += 1;
+            }
+        }
+    }
+    // for i in 0..lines {
+    //     for j in 0..cols {
+    //         print!("{:?} ", dist[i][j]);
+    //     }
+    //     println!();
+    // }
+    Ok((max_dist as i32, inside))
+}
 
 fn day9() -> io::Result<(i32, i32)> {
     let data = fs::read_to_string("data/day9.in").unwrap();
@@ -484,7 +611,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day9()?);
+    dbg!(day10()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
