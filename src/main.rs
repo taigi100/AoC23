@@ -1,10 +1,90 @@
 use itertools::Itertools;
-use num::integer;
+use num::{abs, integer};
 use std::cmp::{max, Ordering};
 use std::collections::{HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day11() -> io::Result<(i32, u64)> {
+    let data = fs::read_to_string("data/day11.in").unwrap();
+    let mut mat = vec![vec!['.'; 1000]; 1000];
+    let mut lines = 0;
+    let mut cols = 0;
+    for (i, line) in data.lines().enumerate() {
+        mat[i] = line.chars().collect();
+        cols = max(cols, line.chars().collect::<Vec<char>>().len());
+        lines += 1;
+    }
+    // do lines
+    let mut empty_lines = Vec::new();
+    for i in 0..lines {
+        let mut is_empty = true;
+        for j in 0..cols {
+            if mat[i][j] != '.' {
+                is_empty = false;
+            }
+        }
+        if is_empty {
+            empty_lines.push(i);
+        }
+    }
+    // do cols
+    let mut empty_cols = Vec::new();
+    for j in 0..cols {
+        let mut is_empty = true;
+        for i in 0..lines {
+            if mat[i][j] != '.' {
+                is_empty = false;
+            }
+        }
+        if is_empty {
+            empty_cols.push(j);
+        }
+    }
+    let mut galaxies = Vec::new();
+    for i in 0..lines {
+        for j in 0..cols {
+            if mat[i][j] == '#' {
+                galaxies.push((i as i32, j as i32));
+            }
+        }
+    }
+    let mut p1 = 0;
+    let mut p2: u64 = 0;
+    for i in 0..galaxies.len() {
+        for j in i + 1..galaxies.len() {
+            let mut dist_p1 =
+                abs(galaxies[j].0 - galaxies[i].0) + abs(galaxies[j].1 - galaxies[i].1);
+            let mut dist_p2 = dist_p1 as u64;
+            let (up, down) = if galaxies[i].0 < galaxies[j].0 {
+                (galaxies[i].0, galaxies[j].0)
+            } else {
+                (galaxies[j].0, galaxies[i].0)
+            };
+            let upsize = 999999;
+            for k in up + 1..down {
+                if empty_lines.contains(&(k as usize)) {
+                    dist_p1 += 1;
+                    dist_p2 += upsize;
+                }
+            }
+            let (left, right) = if galaxies[i].1 < galaxies[j].1 {
+                (galaxies[i].1, galaxies[j].1)
+            } else {
+                (galaxies[j].1, galaxies[i].1)
+            };
+            for k in left + 1..right {
+                if empty_cols.contains(&(k as usize)) {
+                    dist_p1 += 1;
+                    dist_p2 += upsize;
+                }
+            }
+            p1 += dist_p1;
+            p2 += dist_p2;
+        }
+    }
+    Ok((p1 as i32, p2))
+}
 fn day10() -> io::Result<(i32, i32)> {
     let data = fs::read_to_string("data/day10.in").unwrap();
     let dirs: Vec<(i32, i32)> = vec![(1, 0), (0, 1), (-1, 0), (0, -1)];
@@ -47,7 +127,7 @@ fn day10() -> io::Result<(i32, i32)> {
             start.0, start.1, mat[start.0][start.1], end.0, end.1, mat[end.0][end.1], res
         );
         return res;
-    };
+    }
     let mut node = (0, 0);
     for i in 0..lines {
         for j in 0..cols {
@@ -611,7 +691,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day10()?);
+    dbg!(day11()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
