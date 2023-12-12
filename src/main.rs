@@ -5,6 +5,115 @@ use std::collections::{HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day12() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day12.in").unwrap();
+    let mut p1 = 0;
+    let mut p2 = 0;
+
+    fn is_correct(data: &str, nums: &Vec<u32>) -> bool {
+        let mut i = 0;
+        let mut j = 0;
+        while i < data.len() {
+            if data.chars().nth(i).unwrap() == '.' {
+                i += 1;
+                continue;
+            }
+            if data.chars().nth(i).unwrap() == '?' {
+                return false;
+            }
+            if data.chars().nth(i).unwrap() == '#' {
+                if j == nums.len() {
+                    return false;
+                }
+                let mut count = 0;
+                while i < data.len() && data.chars().nth(i).unwrap() == '#' {
+                    count += 1;
+                    i += 1;
+                }
+                if count != nums[j] || (i != data.len() && data.chars().nth(i).unwrap() != '.') {
+                    return false;
+                } else {
+                    j += 1;
+                }
+            }
+        }
+        if j == nums.len() {
+            return true;
+        }
+        false
+    }
+    fn backtrack(data: &str, nums: &Vec<u32>, arrangements: u32, i: usize) -> u64 {
+        if i == data.len() {
+            return if is_correct(data, &nums) { 1 } else { 0 };
+        }
+        if data.chars().nth(i).unwrap() == '.' || data.chars().nth(i).unwrap() == '#' {
+            return backtrack(data, nums, arrangements, i + 1);
+        }
+        if data.chars().nth(i).unwrap() == '?' {
+            let mut new_data = data.chars().collect::<String>();
+            new_data.replace_range(i..i + 1, "#");
+            let danger = backtrack(new_data.as_str(), nums, arrangements, i + 1);
+            new_data.replace_range(i..i + 1, ".");
+            let safe = backtrack(new_data.as_str(), nums, arrangements, i + 1);
+            return danger + safe;
+        }
+        0
+    };
+    let mut dp = HashMap::new();
+    fn f(
+        data: &str,
+        nums: &Vec<u32>,
+        dp: &mut HashMap<(usize, usize, usize), u64>,
+        i: usize,
+        ni: usize,
+        len: usize,
+    ) -> u64 {
+        let key = &(i, ni, len);
+        if dp.contains_key(key) {
+            return dp[key];
+        }
+        if i == data.len() {
+            if ni == nums.len() && len == 0 {
+                return 1;
+            } else if ni == nums.len() - 1 && nums[ni] == len as u32 {
+                return 1;
+            }
+            return 0;
+        }
+        let mut ans = 0;
+        for c in ['.', '#'] {
+            if data.chars().nth(i).unwrap() == c || data.chars().nth(i).unwrap() == '?' {
+                if c == '.' && len == 0 {
+                    ans += f(data, nums, dp, i + 1, ni, 0);
+                } else if c == '.' && len > 0 && ni < nums.len() && nums[ni] == len as u32 {
+                    ans += f(data, nums, dp, i + 1, ni + 1, 0);
+                } else if c == '#' {
+                    ans += f(data, nums, dp, i + 1, ni, len + 1);
+                }
+            }
+        }
+        dp.insert(*key, ans);
+        return ans;
+    }
+    for line in data.lines() {
+        let mut spring = line.split_whitespace().collect::<Vec<_>>()[0].to_string();
+        let mut nums = line.split_whitespace().collect::<Vec<_>>()[1]
+            .split(',')
+            .map(|x| x.parse::<u32>().unwrap())
+            .collect::<Vec<u32>>();
+
+        p1 += f(&spring, &nums, &mut dp, 0, 0, 0);
+        dp.clear();
+        spring.push('?');
+        let mut new_spring = spring.repeat(5);
+        new_spring.remove(new_spring.len() - 1);
+        nums = nums.repeat(5);
+        println!("{} {:?}", new_spring, nums);
+        p2 += f(new_spring.as_str(), &nums, &mut dp, 0, 0, 0);
+        dp.clear();
+    }
+    Ok((p1, p2))
+}
 fn day11() -> io::Result<(i32, u64)> {
     let data = fs::read_to_string("data/day11.in").unwrap();
     let mut mat = vec![vec!['.'; 1000]; 1000];
@@ -691,7 +800,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day11()?);
+    dbg!(day12()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
