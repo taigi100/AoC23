@@ -5,6 +5,79 @@ use std::collections::{HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day13() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day13.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    const N: usize = 50;
+    let mut mat = [['.'; N]; N];
+    let mut lines: usize = 0;
+    let mut cols = 0;
+
+    fn solve(mat: [[char; N]; N], lines: usize, cols: usize) -> u64 {
+        let (mut horizontal_line, mut vertical_line) = (0, 0);
+        let mut ans = 0;
+        //find horizontal line
+        for i in 0..cols as i32 {
+            let mut is_reflection_line = true;
+            let mut k = 1;
+            let mut smuges = 0;
+            while i - k + 1 >= 0 && i + k < cols as i32 && is_reflection_line {
+                for j in 0..lines {
+                    if mat[j][(i - k + 1) as usize] != mat[j][(i + k) as usize] {
+                        smuges += 1;
+                        if smuges > 1 {
+                            is_reflection_line = false;
+                            break;
+                        }
+                    }
+                }
+                k += 1;
+            }
+            if is_reflection_line && i != (cols - 1) as i32 && smuges == 1 {
+                println!("horizontal line: {}", i + 1);
+                ans += i + 1;
+                break;
+            }
+        }
+        for i in 0..lines as i32 {
+            let mut is_reflection_line = true;
+            let mut k = 1;
+            let mut smuges = 0;
+            while i - k + 1 >= 0 && i + k < lines as i32 && is_reflection_line {
+                for j in 0..cols {
+                    if mat[(i - k + 1) as usize][j] != mat[(i + k) as usize][j] {
+                        smuges += 1;
+                        if smuges > 1 {
+                            is_reflection_line = false;
+                            break;
+                        }
+                    }
+                }
+                k += 1;
+            }
+            if is_reflection_line && i != (lines - 1) as i32 && smuges == 1 {
+                println!("vertical line: {}", i + 1);
+                ans += (i + 1) * 100;
+                break;
+            }
+        }
+        ans as u64
+    }
+    for (i, line) in data.lines().enumerate() {
+        if line.is_empty() {
+            p1 += solve(mat, lines, cols);
+            (lines, cols) = (0, 0);
+            continue;
+        }
+        for (j, c) in line.chars().enumerate() {
+            mat[lines][j] = c;
+        }
+        cols = max(cols, line.chars().collect::<Vec<char>>().len());
+        lines += 1;
+    }
+    p1 += solve(mat, lines, cols);
+    Ok((p1, p2))
+}
 fn day12() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day12.in").unwrap();
     let mut p1 = 0;
@@ -13,6 +86,7 @@ fn day12() -> io::Result<(u64, u64)> {
     fn is_correct(data: &str, nums: &Vec<u32>) -> bool {
         let mut i = 0;
         let mut j = 0;
+        let mut q: usize = 0;
         while i < data.len() {
             if data.chars().nth(i).unwrap() == '.' {
                 i += 1;
@@ -800,7 +874,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day12()?);
+    dbg!(day13()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
