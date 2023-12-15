@@ -2,9 +2,167 @@ use itertools::Itertools;
 use num::{abs, integer};
 use std::cmp::{max, Ordering};
 use std::collections::{HashMap, VecDeque};
+use std::mem::swap;
 use std::time::Instant;
-use std::{fs, io};
+use std::{fs, io, mem};
+use transpose::transpose;
 
+fn day15() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day15.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let parts = data.lines().collect_vec()[0].split(",");
+    fn hash(s: &str) -> u32 {
+        s.chars().fold(0, |acc, c| ((acc + c as u32) * 17) % 256)
+    }
+    for part in parts.clone() {
+        p1 += hash(part) as u64;
+    }
+    const N: usize = 256;
+    let mut boxes: Vec<Vec<(String, u64)>> = vec![Vec::new(); 256];
+
+    for part in parts.clone() {
+        let label = part.split(['=', '-']).next().unwrap();
+        let op = if part.contains("-") { '-' } else { '=' };
+        let box_num = hash(label) as usize;
+
+        if op == '=' {
+            let value = part
+                .split(['=', '-'])
+                .nth(1)
+                .unwrap()
+                .parse::<u64>()
+                .unwrap();
+            let mut solved = false;
+            for (i, boxy) in boxes[box_num].iter().enumerate() {
+                if boxy.0 == label {
+                    boxes[box_num][i] = (label.to_string(), value);
+                    solved = true;
+                    break;
+                }
+            }
+            if !solved {
+                boxes[box_num].push((label.to_string(), value));
+            }
+        } else if op == '-' {
+            boxes[box_num].retain(|boxy| boxy.0 != label);
+        }
+    }
+    for box_num in 0..N {
+        if (box_num >= boxes.len() || boxes[box_num].is_empty()) {
+            continue;
+        }
+        for (i, (label, value)) in boxes[box_num].iter().enumerate() {
+            let power = (box_num as u64 + 1) * (i as u64 + 1) * value;
+            println!(
+                "box: {}, label: {}, value: {}, power: {}",
+                box_num, label, value, power
+            );
+            p2 += power as u64;
+        }
+    }
+    Ok((p1, p2))
+}
+
+fn day14() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day14.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let mut mat = data
+        .lines()
+        .map(|l| l.chars().collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+    const N: u32 = 1_000_000_000;
+    fn bring_north_south(mat: &mut Vec<Vec<char>>, dir: i32) {
+        for i in 0..mat.len() {
+            for j in 0..mat[i].len() {
+                if mat[i][j] == 'O' {
+                    let mut k = 1 * dir;
+                    while (i as i32 + k) >= 0
+                        && (i as i32 + k) < mat.len() as i32
+                        && mat[(i as i32 + k) as usize][j] == '.'
+                    {
+                        k += 1 * dir;
+                    }
+                    if (i as i32 + k) == 0 {
+                        k += 1;
+                    }
+                    if (i as i32 + k) == mat.len() as i32 {
+                        k -= 1;
+                    }
+                    if k > 0 && (i as i32 + k) < mat.len() as i32 {
+                        mat[(i as i32 + k) as usize][j] = 'O';
+                        mat[i][j] = '.';
+                    }
+                }
+            }
+        }
+    }
+
+    fn bring_left_right(mat: &mut Vec<Vec<char>>, dir: i32) {
+        for i in 0..mat.len() {
+            for j in 0..mat[i].len() {
+                if mat[i][j] == 'O' {
+                    let mut k = 1 * dir;
+                    while (i as i32 + k) >= 0
+                        && (j as i32 + k) < mat[i].len() as i32
+                        && mat[i][j + k as usize] == '.'
+                    {
+                        k += 1 * dir;
+                    }
+                    if (j as i32 + k) == 0 {
+                        k += 1;
+                    }
+                    if (j as i32 + k) == mat[i].len() as i32 {
+                        k -= 1;
+                    }
+                    if k > 0 && (j as i32 + k) < mat[i].len() as i32 {
+                        mat[i][j + k as usize] = 'O';
+                        mat[i][j] = '.';
+                    }
+                }
+            }
+        }
+    }
+
+    fn score(mat: &Vec<Vec<char>>) -> u64 {
+        let mut score: u64 = 0;
+        for i in 0..mat.len() {
+            for j in 0..mat[i].len() {
+                if mat[i][j] == 'O' {
+                    score += (mat.len() - i) as u64;
+                }
+            }
+        }
+        score
+    }
+    // bring_north(&mut mat);
+    // p1 = score(&mat);
+
+    let mut history = Vec::new();
+    for l in 0..100 {
+        bring_north_south(&mut mat, -1); // north
+        bring_left_right(&mut mat, 1); // right
+        bring_north_south(&mut mat, 1); // south
+        bring_left_right(&mut mat, -1); // left
+        history.push(mat.clone());
+    }
+    p2 = score(&mat);
+    for i in 0..history.len() {
+        for j in 0..history[i].len() {
+            for k in 0..history[i][j].len() {
+                print!("{}", history[i][j][k]);
+            }
+            println!();
+        }
+        println!("{} {}", i, score(&history[i]));
+    }
+    // for i in 0..mat.len() {
+    //     for j in 0..mat[i].len() {
+    //         print!("{}", mat[i][j]);
+    //     }
+    //     println!();
+    // }
+    Ok((p1, p2))
+}
 fn day13() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day13.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -874,7 +1032,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day13()?);
+    dbg!(day15()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
