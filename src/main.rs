@@ -2,11 +2,178 @@ use itertools::Itertools;
 use num::{abs, integer};
 use std::cmp::{max, Ordering};
 use std::collections::{HashMap, VecDeque};
-use std::mem::swap;
 use std::time::Instant;
-use std::{fs, io, mem};
-use transpose::transpose;
+use std::{fs, io};
 
+fn day16() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day16.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let grid = data
+        .lines()
+        .collect_vec()
+        .iter()
+        .map(|l| l.chars().collect_vec())
+        .collect_vec();
+    let mut seen = HashMap::new();
+    fn solve_for_beam(
+        grid: &Vec<Vec<char>>,
+        seen: &mut HashMap<((usize, usize), (isize, isize)), (u32)>,
+        silocation: (isize, isize),
+        sdir: (isize, isize),
+    ) {
+        let mut stack = Vec::new();
+        stack.push((silocation, sdir));
+        while let Some((ilocation, dir)) = stack.pop() {
+            if ilocation.0 < 0
+                || ilocation.0 >= grid.len() as isize
+                || ilocation.1 < 0
+                || ilocation.1 >= grid[0].len() as isize
+            {
+                continue;
+            }
+            let location = (ilocation.0 as usize, ilocation.1 as usize);
+            if seen.contains_key(&(location, dir)) {
+                continue;
+            }
+            seen.insert((location, dir), 1);
+            if grid[location.0][location.1] == '.' {
+                stack.push(((ilocation.0 + dir.0, ilocation.1 + dir.1), dir));
+            } else if grid[location.0][location.1] == '\\' {
+                match dir {
+                    (-1, 0) => stack.push(((ilocation.0, ilocation.1 - 1), (0, -1))),
+                    (1, 0) => stack.push(((ilocation.0, ilocation.1 + 1), (0, 1))),
+                    (0, 1) => stack.push(((ilocation.0 + 1, ilocation.1), (1, 0))),
+                    (0, -1) => stack.push(((ilocation.0 - 1, ilocation.1), (-1, 0))),
+                    _ => continue,
+                }
+            } else if grid[location.0][location.1] == '/' {
+                match dir {
+                    (-1, 0) => stack.push(((ilocation.0, ilocation.1 + 1), (0, 1))),
+                    (1, 0) => stack.push(((ilocation.0, ilocation.1 - 1), (0, -1))),
+                    (0, 1) => stack.push(((ilocation.0 - 1, ilocation.1), (-1, 0))),
+                    (0, -1) => stack.push(((ilocation.0 + 1, ilocation.1), (1, 0))),
+                    _ => continue,
+                }
+            } else if grid[location.0][location.1] == '-' {
+                match dir {
+                    (-1, 0) | (1, 0) => {
+                        stack.push(((ilocation.0, ilocation.1 + 1), (0, 1)));
+                        stack.push(((ilocation.0, ilocation.1 - 1), (0, -1)));
+                    }
+                    (0, 1) | (0, -1) => stack.push(((ilocation.0, ilocation.1 + dir.1), dir)),
+                    _ => continue,
+                }
+            } else if grid[location.0][location.1] == '|' {
+                match dir {
+                    (-1, 0) | (1, 0) => stack.push(((ilocation.0 + dir.0, ilocation.1), dir)),
+                    (0, 1) | (0, -1) => {
+                        stack.push(((ilocation.0 + 1, ilocation.1), (1, 0)));
+                        stack.push(((ilocation.0 - 1, ilocation.1), (-1, 0)));
+                    }
+                    _ => continue,
+                }
+            }
+        }
+    }
+    solve_for_beam(&grid, &mut seen, (0, 0), (0, 1));
+    p1 = seen
+        .keys()
+        .collect_vec()
+        .iter()
+        .map(|&&k| k.0)
+        .unique()
+        .collect_vec()
+        .len() as u64;
+    seen.clear();
+    let mut max = 0;
+    for i in 1..grid.len() - 1 {
+        solve_for_beam(&grid, &mut seen, (0, i as isize), (0, 1));
+        max = max.max(
+            seen.keys()
+                .collect_vec()
+                .iter()
+                .map(|&&k| k.0)
+                .unique()
+                .collect_vec()
+                .len() as u64,
+        );
+        seen.clear();
+    }
+    for i in 1..grid.len() - 1 {
+        solve_for_beam(
+            &grid,
+            &mut seen,
+            (grid[0].len() as isize - 1, i as isize),
+            (0, -1),
+        );
+        max = max.max(
+            seen.keys()
+                .collect_vec()
+                .iter()
+                .map(|&&k| k.0)
+                .unique()
+                .collect_vec()
+                .len() as u64,
+        );
+        seen.clear();
+    }
+    for i in 1..grid[0].len() - 1 {
+        solve_for_beam(&grid, &mut seen, (0, i as isize), (1, 0));
+        max = max.max(
+            seen.keys()
+                .collect_vec()
+                .iter()
+                .map(|&&k| k.0)
+                .unique()
+                .collect_vec()
+                .len() as u64,
+        );
+        seen.clear();
+    }
+    for i in 1..grid[0].len() - 1 {
+        solve_for_beam(
+            &grid,
+            &mut seen,
+            (grid.len() as isize - 1, i as isize),
+            (-1, 0),
+        );
+        max = max.max(
+            seen.keys()
+                .collect_vec()
+                .iter()
+                .map(|&&k| k.0)
+                .unique()
+                .collect_vec()
+                .len() as u64,
+        );
+        seen.clear();
+    }
+
+    for (aloc, adir) in [
+        ((0, 0), (0, 1)),
+        ((0, 0), (1, 0)),
+        ((0, grid[0].len() - 1), (0, -1)),
+        ((0, grid[0].len() - 1), (1, 0)),
+        ((grid.len() - 1, 0), (0, 1)),
+        ((grid.len() - 1, 0), (-1, 0)),
+        ((grid.len() - 1, grid[0].len() - 1), (0, -1)),
+        ((grid.len() - 1, grid[0].len() - 1), (-1, 0)),
+    ] {
+        solve_for_beam(&grid, &mut seen, (aloc.0 as isize, aloc.1 as isize), adir);
+        max = max.max(
+            seen.keys()
+                .collect_vec()
+                .iter()
+                .map(|&&k| k.0)
+                .unique()
+                .collect_vec()
+                .len() as u64,
+        );
+        seen.clear();
+    }
+    p2 = max;
+    Ok((p1, p2))
+}
 fn day15() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day15.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -48,7 +215,7 @@ fn day15() -> io::Result<(u64, u64)> {
         }
     }
     for box_num in 0..N {
-        if (box_num >= boxes.len() || boxes[box_num].is_empty()) {
+        if box_num >= boxes.len() || boxes[box_num].is_empty() {
             continue;
         }
         for (i, (label, value)) in boxes[box_num].iter().enumerate() {
@@ -290,7 +457,7 @@ fn day12() -> io::Result<(u64, u64)> {
             return danger + safe;
         }
         0
-    };
+    }
     let mut dp = HashMap::new();
     fn f(
         data: &str,
@@ -1032,7 +1199,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day15()?);
+    dbg!(day16()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
