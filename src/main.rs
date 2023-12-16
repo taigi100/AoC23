@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use itertools::Itertools;
 use num::{abs, integer};
 use std::cmp::{max, Ordering};
@@ -224,7 +225,7 @@ fn day15() -> io::Result<(u64, u64)> {
                 "box: {}, label: {}, value: {}, power: {}",
                 box_num, label, value, power
             );
-            p2 += power as u64;
+            p2 += power;
         }
     }
     Ok((p1, p2))
@@ -305,7 +306,7 @@ fn day14() -> io::Result<(u64, u64)> {
     // p1 = score(&mat);
 
     let mut history = Vec::new();
-    for l in 0..100 {
+    for _ in 0..100 {
         bring_north_south(&mut mat, -1); // north
         bring_left_right(&mut mat, 1); // right
         bring_north_south(&mut mat, 1); // south
@@ -339,7 +340,6 @@ fn day13() -> io::Result<(u64, u64)> {
     let mut cols = 0;
 
     fn solve(mat: [[char; N]; N], lines: usize, cols: usize) -> u64 {
-        let (mut horizontal_line, mut vertical_line) = (0, 0);
         let mut ans = 0;
         //find horizontal line
         for i in 0..cols as i32 {
@@ -388,7 +388,7 @@ fn day13() -> io::Result<(u64, u64)> {
         }
         ans as u64
     }
-    for (i, line) in data.lines().enumerate() {
+    for line in data.lines() {
         if line.is_empty() {
             p1 += solve(mat, lines, cols);
             (lines, cols) = (0, 0);
@@ -411,7 +411,6 @@ fn day12() -> io::Result<(u64, u64)> {
     fn is_correct(data: &str, nums: &Vec<u32>) -> bool {
         let mut i = 0;
         let mut j = 0;
-        let mut q: usize = 0;
         while i < data.len() {
             if data.chars().nth(i).unwrap() == '.' {
                 i += 1;
@@ -591,7 +590,7 @@ fn day11() -> io::Result<(i32, u64)> {
             p2 += dist_p2;
         }
     }
-    Ok((p1 as i32, p2))
+    Ok((p1, p2))
 }
 fn day10() -> io::Result<(i32, i32)> {
     let data = fs::read_to_string("data/day10.in").unwrap();
@@ -607,7 +606,7 @@ fn day10() -> io::Result<(i32, i32)> {
     }
     fn connected(start: (usize, usize), end: (usize, usize), mat: &Vec<Vec<char>>) -> bool {
         let mut res = false;
-        if (start.0 == end.0) {
+        if start.0 == end.0 {
             let (left, right) = if start.1 < end.1 {
                 (start, end)
             } else {
@@ -618,7 +617,7 @@ fn day10() -> io::Result<(i32, i32)> {
             {
                 res = true;
             }
-        } else if (start.1 == end.1) {
+        } else if start.1 == end.1 {
             let (bottom, top) = if start.0 > end.0 {
                 (start, end)
             } else {
