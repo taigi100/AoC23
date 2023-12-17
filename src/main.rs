@@ -1,11 +1,93 @@
 #![allow(dead_code)]
 use itertools::Itertools;
 use num::{abs, integer};
-use std::cmp::{max, Ordering};
-use std::collections::{HashMap, VecDeque};
+use std::cmp::{max, Ordering, Reverse};
+use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day17() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day17.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let dirs = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+    let grid = data
+        .lines()
+        .map(|l| {
+            l.chars()
+                .map(|c| c.to_digit(10).unwrap())
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    fn dijkstra(grid: &Vec<Vec<u32>>, minstep: isize, maxstep: isize) -> i64 {
+        let mut location = (0, 0);
+        let mut queue = BinaryHeap::from_iter([Reverse((0, 1, (0, 0), (0, 1)))]); // cost, step, location. direction
+        let mut dist = HashMap::new(); // location, direction, step -> cost
+        dist.insert(((0, 0), (0, 1), 1), 0);
+        while let Some(Reverse(item)) = queue.pop() {
+            let (cost, steps, node, dir) = item;
+            let mut valid_dirs = match (dir) {
+                (0, 1) => vec![(0, 1), (1, 0), (-1, 0)],
+                (1, 0) => vec![(1, 0), (0, 1), (0, -1)],
+                (0, -1) => vec![(0, -1), (1, 0), (-1, 0)],
+                (-1, 0) => vec![(-1, 0), (0, 1), (0, -1)],
+                _ => unreachable!(),
+            };
+            if steps == maxstep {
+                // need to turn, remove forward dir
+                valid_dirs.remove(0);
+            }
+            if steps < minstep {
+                // need to keep going forward, remove others
+                valid_dirs = vec![valid_dirs[0]];
+            }
+            for &(dx, dy) in &valid_dirs {
+                let (x, y) = (node.0 + dx, node.1 + dy);
+                if x < 0 || x >= grid.len() as i32 || y < 0 || y >= grid[0].len() as i32 {
+                    continue;
+                }
+                let next_step = if dir == (dx, dy) { steps + 1 } else { 1 };
+                let current = ((node.0, node.1), dir, steps);
+                let next = ((x, y), (dx, dy), next_step);
+                if !dist.contains_key(&next)
+                    || dist[&next] > dist[&current] + grid[x as usize][y as usize]
+                {
+                    dist.insert(next, dist[&current] + grid[x as usize][y as usize]);
+                    queue.push(Reverse((
+                        dist[&current] + grid[x as usize][y as usize],
+                        next_step,
+                        (x, y),
+                        (dx, dy),
+                    )));
+                }
+            }
+        }
+        let mut min_cost = u32::MAX;
+        for dir in [(1, 0), (0, 1), (-1, 0), (0, -1)] {
+            for step in minstep..=maxstep {
+                if dist.contains_key(&(
+                    (grid.len() as i32 - 1, grid[0].len() as i32 - 1),
+                    dir,
+                    step,
+                )) {
+                    println!(
+                        "{} - {:?}- {}",
+                        step,
+                        dir,
+                        dist[&((grid.len() as i32 - 1, grid[0].len() as i32 - 1), dir, step)]
+                    );
+                    min_cost = min_cost
+                        .min(dist[&((grid.len() as i32 - 1, grid[0].len() as i32 - 1), dir, step)]);
+                }
+            }
+        }
+        println!("----");
+        return min_cost as i64;
+    }
+    p1 = dijkstra(&grid, 1, 3);
+    p2 = dijkstra(&grid, 4, 10);
+    Ok((p1 as u64, p2 as u64))
+}
 fn day16() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day16.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -1198,7 +1280,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day16()?);
+    dbg!(day17()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
