@@ -20,7 +20,7 @@ fn day18() -> io::Result<(u64, u64)> {
     grid[0][0] = ('#', "");
     for line in data.lines() {
         let dir = line.split_whitespace().nth(0).unwrap();
-        let cnt = line
+        let mut cnt = line
             .split_whitespace()
             .nth(1)
             .unwrap()
@@ -32,11 +32,12 @@ fn day18() -> io::Result<(u64, u64)> {
             .unwrap()
             .trim_matches(|c| c == '(' || c == ')')
             .trim_matches('#');
-        let mut direction = match dir {
-            "U" => (-cnt, 0),
-            "D" => (cnt, 0),
-            "L" => (0, -cnt),
-            "R" => (0, cnt),
+        cnt = isize::from_str_radix(&color[0..color.len() - 1], 16).unwrap();
+        let mut direction = match color.as_bytes()[color.len() - 1] {
+            b'3' => (-cnt, 0),
+            b'1' => (cnt, 0),
+            b'2' => (0, -cnt),
+            b'0' => (0, cnt),
             _ => unreachable!(),
         };
         current = (current.0 + direction.0, current.1 + direction.1);
