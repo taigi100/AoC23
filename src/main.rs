@@ -6,6 +6,53 @@ use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day18() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day18.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+
+    let mut current = (0, 0);
+    let (mut n, mut m) = (0, 0);
+
+    let mut points = Vec::new();
+    let mut grid = vec![vec![('.', ""); 100]; 100];
+    points.push(((0, 0), ""));
+    let mut grid_points = 0;
+    grid[0][0] = ('#', "");
+    for line in data.lines() {
+        let dir = line.split_whitespace().nth(0).unwrap();
+        let cnt = line
+            .split_whitespace()
+            .nth(1)
+            .unwrap()
+            .parse::<isize>()
+            .unwrap();
+        let color = line
+            .split_whitespace()
+            .nth(2)
+            .unwrap()
+            .trim_matches(|c| c == '(' || c == ')')
+            .trim_matches('#');
+        let mut direction = match dir {
+            "U" => (-cnt, 0),
+            "D" => (cnt, 0),
+            "L" => (0, -cnt),
+            "R" => (0, cnt),
+            _ => unreachable!(),
+        };
+        current = (current.0 + direction.0, current.1 + direction.1);
+        grid_points += cnt;
+        points.push(((current.0, current.1), color));
+    }
+    let mut s = points
+        .iter()
+        .tuple_windows()
+        .map(|(((x1, y1), _), ((x2, y2), _))| (y1 + y2) * (x2 - x1))
+        .sum::<isize>();
+    s = (grid_points + s) / 2 + 1;
+    println!("s = {}", s);
+
+    Ok((p1, p2))
+}
 fn day17() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day17.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -21,9 +68,9 @@ fn day17() -> io::Result<(u64, u64)> {
 
     fn dijkstra(grid: &Vec<Vec<u32>>, minstep: isize, maxstep: isize) -> i64 {
         let mut location = (0, 0);
-        let mut queue = BinaryHeap::from_iter([Reverse((0, 1, (0, 0), (0, 1)))]); // cost, step, location. direction
+        let mut queue = BinaryHeap::from_iter([Reverse((0, 1, (0, 0), (0, 0)))]); // cost, step, location. direction
         let mut dist = HashMap::new(); // location, direction, step -> cost
-        dist.insert(((0, 0), (0, 1), 1), 0);
+        dist.insert(((0, 0), (0, 0), 1), 0);
         while let Some(Reverse(item)) = queue.pop() {
             let (cost, steps, node, dir) = item;
             let mut valid_dirs = match (dir) {
@@ -31,7 +78,7 @@ fn day17() -> io::Result<(u64, u64)> {
                 (1, 0) => vec![(1, 0), (0, 1), (0, -1)],
                 (0, -1) => vec![(0, -1), (1, 0), (-1, 0)],
                 (-1, 0) => vec![(-1, 0), (0, 1), (0, -1)],
-                _ => unreachable!(),
+                _ => vec![(0, 1), (0, -1), (1, 0), (-1, 0)],
             };
             if steps == maxstep {
                 // need to turn, remove forward dir
@@ -1280,7 +1327,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day17()?);
+    dbg!(day18()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
