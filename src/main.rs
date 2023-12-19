@@ -6,6 +6,159 @@ use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day19() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day19.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let (wf, pts) = data
+        .split_once("\r\n\r\n")
+        .map(|(a, b)| (a.lines().collect_vec(), b.lines().collect_vec()))
+        .unwrap();
+    let mut parts = Vec::new();
+    for pt in pts {
+        parts.push(
+            pt.split(['{', '}', 'x', 'm', 'a', 's', '=', ','])
+                .filter(|s| !s.is_empty())
+                .map(|s| s.parse::<u64>().unwrap_or(0))
+                .collect_tuple()
+                .unwrap_or((0, 0, 0, 0)),
+        );
+    }
+    let mut wfs = HashMap::new();
+    for w in wf {
+        wfs.insert(
+            w.split('{').next().unwrap(),
+            w.split(['{', ',', '}'])
+                .skip(1)
+                .filter(|s| !s.is_empty())
+                .collect_vec(),
+        );
+    }
+
+    fn parse_rule(rls: &Vec<&str>, p: (u64, u64, u64, u64)) -> String {
+        for r in rls {
+            // Endoing node
+            if !r.contains(":") {
+                return r.to_string();
+            }
+            let (cond, res) = r.split_once(":").unwrap();
+            let (l, op, v) = (
+                cond.as_bytes()[0],
+                cond.as_bytes()[1],
+                cond[2..].parse::<u64>().unwrap(),
+            );
+            println!("Evaluating rule {} {} {}", l, op, v);
+            let part_num = match l {
+                b'x' => p.0,
+                b'm' => p.1,
+                b'a' => p.2,
+                b's' => p.3,
+                _ => unreachable!(),
+            };
+            if op == b'<' && part_num < v {
+                return res.to_string();
+            } else if op == b'>' && part_num > v {
+                return res.to_string();
+            }
+        }
+        return String::new();
+    }
+
+    for p in parts {
+        let mut result = String::from("in");
+        while !["A", "R"].contains(&result.as_str()) {
+            result = parse_rule(&wfs[result.as_str()], p);
+        }
+        if result == "A" {
+            p1 += p.0 + p.1 + p.2 + p.3;
+        }
+    }
+
+    fn solve_p2(rls: &HashMap<&str, Vec<&str>>, current: &str, p: &Vec<(u64, u64)>) -> u64 {
+        let mut ans = 0;
+        for r in &rls[current] {
+            // Endoing node
+            if *r == "A" {
+                println!(
+                    "{} - {:?} = {}",
+                    current,
+                    p,
+                    (p[0].1 - p[0].0 + 1)
+                        * (p[1].1 - p[1].0 + 1)
+                        * (p[2].1 - p[2].0 + 1)
+                        * (p[3].1 - p[3].0 + 1)
+                );
+                ans += (p[0].1 - p[0].0 + 1)
+                    * (p[1].1 - p[1].0 + 1)
+                    * (p[2].1 - p[2].0 + 1)
+                    * (p[3].1 - p[3].0 + 1);
+                continue;
+            }
+            if *r == "R" {
+                return ans;
+            }
+            if !r.contains(":") {
+                ans += solve_p2(rls, r, p);
+                continue;
+            }
+            // Got a rule
+            let (cond, res) = r.split_once(":").unwrap();
+            let (l, op, mut v) = (
+                cond.as_bytes()[0],
+                cond.as_bytes()[1],
+                cond[2..].parse::<u64>().unwrap(),
+            );
+            let part_num = match l {
+                b'x' => 0,
+                b'm' => 1,
+                b'a' => 2,
+                b's' => 3,
+                _ => unreachable!(),
+            };
+            let mut new_part = p.clone();
+            if op == b'<' {
+                if p[part_num].0 < v && v < p[part_num].1 {
+                    // left interval
+                    new_part[part_num].1 = v - 1;
+                    ans += solve_p2(rls, res, &new_part);
+                    // right interval
+                    new_part = p.clone();
+                    new_part[part_num].0 = v;
+                    ans += solve_p2(rls, current, &new_part);
+                    return ans;
+                } else if p[part_num].1 < v {
+                    ans += solve_p2(rls, res, &new_part);
+                    return ans;
+                    continue;
+                }
+            } else {
+                if p[part_num].0 < v && v < p[part_num].1 {
+                    // left interval
+                    new_part[part_num].1 = v;
+                    ans += solve_p2(rls, current, &new_part);
+                    // right interval
+                    new_part = p.clone();
+                    new_part[part_num].0 = v + 1;
+                    ans += solve_p2(rls, res, &new_part);
+                    return ans;
+                } else if p[part_num].0 > v {
+                    return solve_p2(rls, res, &new_part);
+                }
+            }
+        }
+        return ans;
+    }
+    wfs.insert("A", vec!["A"]);
+    wfs.insert("R", vec!["R"]);
+    p2 = solve_p2(
+        &wfs,
+        "in",
+        &vec![(1, 4000), (1, 4000), (1, 4000), (1, 4000)],
+    );
+    // println!("{:?}", wfs);
+    // println!("{:?}", parts);
+    Ok((p1, p2))
+}
+
 fn day18() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day18.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -1328,7 +1481,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day18()?);
+    dbg!(day19()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
