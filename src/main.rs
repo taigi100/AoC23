@@ -6,6 +6,167 @@ use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day20() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day20.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let mut graph = HashMap::new();
+    let mut graph_types = HashMap::new();
+    let mut flipflops = HashMap::new();
+    let mut conjunctions = HashMap::<&str, Vec<(&str, i32)>>::new();
+    for line in data.lines() {
+        let mut new_line = line.clone();
+        let t = if ["%", "&"].contains(&&line[0..1]) {
+            new_line = &new_line[1..];
+            &line[0..1]
+        } else {
+            "#"
+        };
+        let a = new_line.split("->").next().unwrap().trim();
+        let b = new_line
+            .split("->")
+            .nth(1)
+            .unwrap()
+            .split(",")
+            .filter(|s| !s.is_empty())
+            .map(|s| s.trim())
+            .collect_vec();
+        graph.insert(a, b);
+        graph_types.insert(a, t);
+        if t == "%" {
+            flipflops.insert(a, -1);
+        }
+    }
+    graph.insert("button", vec!["broadcaster"]);
+    graph_types.insert("button", "#");
+    let mut new_entries = Vec::new();
+    for (n, v) in &graph {
+        for w in v {
+            if !graph_types.contains_key(w) {
+                new_entries.push(*w);
+            }
+        }
+    }
+    for w in new_entries {
+        graph_types.insert(w, "#");
+        graph.insert(w, Vec::new());
+    }
+    for (n, t) in &graph_types {
+        if *t == "&" {
+            // look for all neighbours
+            for (origin, dest) in &graph {
+                if dest.contains(&n) {
+                    conjunctions
+                        .entry(n)
+                        .or_insert_with(Vec::new)
+                        .push((origin, -1));
+                }
+            }
+        }
+    }
+    for (node, conj) in &mut conjunctions {
+        conj.iter().unique().collect_vec();
+    }
+    println!("{:?}", graph);
+    println!("{:?}", graph_types);
+    println!("{:?}", flipflops);
+    println!("{:?}", conjunctions);
+    fn DFS<'a>(
+        graph: &HashMap<&str, Vec<&'a str>>,
+        graph_types: &HashMap<&str, &str>,
+        flipflops: &mut HashMap<&'a str, i32>,
+        conjunctions: &mut HashMap<&'a str, Vec<(&str, i32)>>,
+        lcm: &mut HashMap<&'a str, i32>,
+        presses: i32,
+        start: &str,
+    ) -> (i64, i64) {
+        let mut queue = VecDeque::new();
+        let (mut lows, mut highs) = (0, 0);
+        queue.push_back((start, -1));
+        while let Some((node, signal)) = queue.pop_front() {
+            for n in &graph[node] {
+                if signal == -1 {
+                    lows += 1;
+                } else {
+                    highs += 1;
+                }
+                if *n == "rx" && signal == -1 {
+                    return (-1, -1);
+                }
+                if graph_types[n] == "#" {
+                    queue.push_back((n, signal));
+                } else if graph_types[n] == "%" {
+                    if signal == -1 {
+                        let status = flipflops[n] * -1;
+                        flipflops.insert(n, status);
+                        queue.push_back((n, status));
+                    }
+                } else if graph_types[n] == "&" {
+                    if let Some(conjunction) = conjunctions.get_mut(n) {
+                        for c in &mut *conjunction {
+                            if c.0 == node {
+                                c.1 = signal;
+                            }
+                        }
+                        if conjunction.iter().any(|(v, s)| *s == -1) {
+                            queue.push_back((n, 1));
+                            if ["sr", "sn", "rf", "vq"].contains(n) {
+                                if !lcm.contains_key(n) {
+                                    lcm.insert(n, presses);
+                                }
+                            }
+                        } else {
+                            queue.push_back((n, -1));
+                        }
+                    }
+                }
+            }
+        }
+        (lows, highs)
+    }
+    // p1 - lazy to reset
+    // let (mut lows, mut highs) = (0, 0);
+    // for i in 0..1000 {
+    //     let (l, h) = DFS(
+    //         &graph,
+    //         &graph_types,
+    //         &mut flipflops,
+    //         &mut conjunctions,
+    //         "button",
+    //     );
+    //     lows += l;
+    //     highs += h;
+    //     // println!("flips: {:?}", flipflops);
+    //     // println!("conj: {:?}", conjunctions);
+    // }
+    // println!("{:?}", lows);
+    // println!("{:?}", highs);
+    // p1 = lows * highs;
+    let mut lcm = HashMap::new();
+    let (mut l, mut r) = (0, 0);
+    while (l, r) != (-1, -1) {
+        p2 += 1;
+        (l, r) = DFS(
+            &graph,
+            &graph_types,
+            &mut flipflops,
+            &mut conjunctions,
+            &mut lcm,
+            p2 as i32,
+            "button",
+        );
+        if lcm.len() == 4 {
+            p2 = lcm
+                .iter()
+                .map(|(s, v)| *v as u64)
+                .collect_vec()
+                .iter()
+                .fold(1u64, |acc, num| integer::lcm(acc, *num));
+            break;
+        }
+    }
+    Ok((p1, p2))
+}
+
 fn day19() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day19.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -1481,7 +1642,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day19()?);
+    dbg!(day20()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
