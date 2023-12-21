@@ -6,6 +6,79 @@ use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day21() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day21.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let mut grid = data
+        .lines()
+        .map(|l| l.chars().collect::<Vec<char>>())
+        .collect_vec();
+    let (mut x, mut y) = (0, 0);
+    let mut gradens_counter = 0;
+    for i in 0..grid.len() {
+        for j in 0..grid[i].len() {
+            if grid[i][j] == 'S' {
+                x = i;
+                y = j;
+            } else if grid[i][j] == '.' {
+                gradens_counter += 1;
+            }
+        }
+    }
+    let mut queue = VecDeque::new();
+
+    fn step(grid: &mut Vec<Vec<char>>, queue: &mut VecDeque<(i64, i64)>) {
+        let mut step_queue = queue.clone();
+        queue.clear();
+        while let Some((x, y)) = step_queue.pop_front() {
+            for (dx, dy) in vec![(0, 1), (1, 0), (-1, 0), (0, -1)] {
+                let nx = x + dx;
+                let ny = y + dy;
+                let mx = grid.len() as i64;
+                let my = grid[0].len() as i64;
+                let cx = ((nx % mx + mx) % mx) as usize;
+                let cy = ((ny % my + my) % my) as usize;
+                if grid[cx][cy] == '.' {
+                    if !queue.contains(&(nx, ny)) {
+                        queue.push_back((nx, ny));
+                    }
+                }
+            }
+        }
+    }
+    grid[x][y] = '.';
+    let N = grid.len() as i64;
+    for k in [1] {
+        // [65, 65 + N, 65 + 2 * N] {
+        // for k in [50, 100, 500] {
+        queue.clear();
+        queue.push_back((x as i64, y as i64));
+        println!("k = {}", k);
+        for i in 0..k {
+            step(&mut grid, &mut queue);
+            if i % 100 == 0 {
+                println!("{} steps", i);
+            }
+        }
+        println!("ans = {}", queue.len());
+    }
+
+    fn f(n: u64) -> u64 {
+        let (a0, a1, a2) = (3814, 33952, 94138);
+        let (b0, b1, b2) = (a0, a1 - a0, a2 - a1);
+        return b0 + n * b1 + (b2 - b1) * (n * (n - 1) / 2);
+    }
+    println!("f = {}", f(26501365 / 131));
+    p1 = queue.len() as u64;
+    // for i in 0..grid.len() {
+    //     for j in 0..grid[i].len() {
+    //         print!("{}", grid[i][j]);
+    //     }
+    //     println!();
+    // }
+    Ok((p1, p2))
+}
+
 fn day20() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day20.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -1642,7 +1715,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day20()?);
+    dbg!(day21()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
