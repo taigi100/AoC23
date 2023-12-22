@@ -6,6 +6,72 @@ use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day22() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day22.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let mut bricks = Vec::new();
+    for line in data.lines() {
+        let coords = line
+            .split([',', '~'])
+            .filter(|x| !x.is_empty())
+            .map(|x| x.parse::<usize>().unwrap())
+            .collect::<Vec<_>>();
+        bricks.push((
+            (coords[0], coords[1], coords[2]),
+            (coords[3], coords[4], coords[5]),
+        ));
+    }
+    // ToDo: Do we need a more advanced sorting algorithm here?
+    bricks.sort_by(|a, b| a.0 .2.cmp(&b.0 .2));
+
+    fn dropped_brick(
+        tallest: &HashMap<(usize, usize), usize>,
+        x: &((usize, usize, usize), (usize, usize, usize)),
+    ) -> ((usize, usize, usize), (usize, usize, usize)) {
+        let mut peak: usize = 0;
+        for i in x.0 .0..=x.1 .0 {
+            for j in x.0 .1..=x.1 .1 {
+                peak = max(peak, *tallest.get(&(i, j)).unwrap_or(&0));
+            }
+        }
+        let dz = max(0, x.0 .2 - peak - 1);
+        return ((x.0 .0, x.0 .1, x.0 .2 - dz), (x.1 .0, x.1 .1, x.1 .2 - dz));
+    }
+    fn drop(
+        bricks: Vec<((usize, usize, usize), (usize, usize, usize))>,
+    ) -> (u64, Vec<((usize, usize, usize), (usize, usize, usize))>) {
+        let mut tallest = HashMap::new();
+        let mut new_tower = Vec::new();
+        let mut falls: u64 = 0;
+        for b in bricks {
+            let new_brick = dropped_brick(&tallest, &b);
+            if new_brick.0 .2 != b.0 .2 {
+                falls += 1
+            }
+            new_tower.push(new_brick);
+            for x in (b.0 .0..=b.1 .0) {
+                for y in (b.0 .1..=b.1 .1) {
+                    tallest.insert((x, y), new_brick.1 .2);
+                }
+            }
+        }
+        return (falls, new_tower);
+    }
+
+    let (_, fallen) = drop(bricks);
+    for i in 0..fallen.len() {
+        let mut removed = fallen.clone();
+        removed.remove(i);
+        let (mut falls, _) = drop(removed);
+        if falls == 0 {
+            p1 += 1;
+        } else {
+            p2 += falls;
+        }
+    }
+    Ok((p1, p2))
+}
+
 fn day21() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day21.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -1715,7 +1781,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day21()?);
+    dbg!(day22()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
