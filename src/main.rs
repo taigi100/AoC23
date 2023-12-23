@@ -6,6 +6,192 @@ use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day23() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day23.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let mut grid = HashMap::new();
+    let (mut start, mut end) = ((0, 0), (0, 0));
+    let (n, m) = (data.lines().count(), data.lines().next().unwrap().len());
+    for (i, line) in data.lines().enumerate() {
+        for j in 0..line.len() {
+            grid.insert((i, j), line.chars().nth(j).unwrap());
+            if (i == 0 && grid[&(i, j)] == '.') {
+                start = (i, j);
+            }
+            if (i == data.lines().count() - 1 && grid[&(i, j)] == '.') {
+                end = (i, j);
+            }
+        }
+    }
+    fn count_neighbours(
+        grid: &HashMap<(usize, usize), char>,
+        i: usize,
+        j: usize,
+        n: usize,
+        m: usize,
+    ) -> usize {
+        let mut count = 0;
+        for (di, dj) in [(0, 1), (1, 0), (0, -1), (-1, 0)] {
+            if di == 0 && dj == 0 {
+                continue;
+            }
+
+            let dx = (i as isize + di);
+            let dy = (j as isize + dj);
+            if dx < 0 || dx >= n as isize || dy < 0 || dy >= m as isize {
+                continue;
+            }
+            let (x, y) = (dx as usize, dy as usize);
+            if grid.contains_key(&(x, y)) && grid[&(x, y)] != '#' {
+                count += 1;
+            }
+        }
+        count
+    }
+    let mut skip_list = HashMap::new();
+    let mut all_tunnels = Vec::new();
+    let mut in_tunnels = Vec::new();
+    let mut S = VecDeque::new();
+    let mut seen = HashMap::new();
+    S.push_back(start);
+    while let Some((i, j)) = S.pop_front() {
+        if seen.contains_key(&(i, j)) {
+            continue;
+        }
+        seen.insert((i, j), true);
+        // look down and right
+        for d in [(1isize, 0isize), (0, 1), (-1, 0), (0, -1)] {
+            let (mut k, mut l) = (i as isize + d.0, j as isize + d.1);
+            let mut distance: usize = 1;
+            let mut prev = (i, j);
+            let mut path_nodes = Vec::new();
+            while k >= 0 && k < n as isize && l >= 0 && l < m as isize {
+                if grid[&(k as usize, l as usize)] == '#'
+                    || count_neighbours(&grid, k as usize, l as usize, n, m) != 2
+                    || in_tunnels.contains(&(k as usize, l as usize))
+                {
+                    break;
+                }
+                path_nodes.push((k as usize, l as usize));
+                let mut next = (0, 0);
+                for (di, dj) in [(1, 0), (0, 1), (-1, 0), (0, -1)] {
+                    let (x, y) = (k as isize + di, l as isize + dj);
+                    if x < 0 || x >= n as isize || y < 0 || y >= m as isize {
+                        continue;
+                    }
+                    let (x, y) = (x as usize, y as usize);
+                    if grid[&(x, y)] != '#' && prev != (x, y) {
+                        next = (x, y);
+                        prev = (k as usize, l as usize);
+                        distance += 1;
+                        break;
+                    }
+                }
+                (k, l) = (next.0 as isize, next.1 as isize);
+            }
+            if (distance > 1) {
+                skip_list.insert(((i, j), d), ((k as usize, l as usize), distance));
+                skip_list.insert(
+                    (
+                        (k as usize, l as usize),
+                        (prev.0 as isize - k, prev.1 as isize - l),
+                    ),
+                    ((i, j), distance),
+                );
+                all_tunnels.push(path_nodes.clone());
+                for p in &path_nodes[1..] {
+                    in_tunnels.push(*p);
+                }
+                S.push_back((k as usize, l as usize));
+            }
+        }
+    }
+    for p in all_tunnels {
+        for n in p {
+            grid.insert((n.0, n.1), '0');
+        }
+    }
+    // println!("{:?}", skip_list[&((5, 3), (1, 0))]);
+    for i in 0..n {
+        for j in 0..m {
+            print!("{}", grid[&(i, j)]);
+        }
+        println!();
+    }
+    println!("{:?}", skip_list);
+
+    fn DFS(
+        grid: &HashMap<(usize, usize), char>,
+        start: (usize, usize),
+        end: (usize, usize),
+        n: usize,
+        m: usize,
+        part1: bool,
+        skip_list: &HashMap<((usize, usize), (isize, isize)), ((usize, usize), usize)>,
+    ) -> u64 {
+        let mut ans = 0;
+        let mut S = VecDeque::new();
+        let mut seen = HashMap::new();
+        let mut path = vec![start];
+        seen.insert(start, true);
+        S.push_back((start, 0, path, seen));
+        while let Some(item) = S.pop_front() {
+            let (node, dist, path, current_seen) = item;
+            // println!("Visiting node: {:?} - {}", node, dist);
+            if node == end {
+                ans = ans.max(dist);
+                println!("Found with dist: {}", dist);
+                // for i in 0..n {
+                //     for j in 0..m {
+                //         if path.contains(&(i, j)) {
+                //             print!("X");
+                //         } else {
+                //             print!("{}", grid.get(&(i, j)).unwrap());
+                //         }
+                //     }
+                //     println!();
+                // }
+            }
+            let mut dirs = vec![(0, 1), (1, 0), (0, -1), (-1, 0)];
+            if part1 {
+                if ['<', '^', 'v', '>'].contains(&grid[&(node.0, node.1)]) {
+                    match grid[&(node.0, node.1)] {
+                        '<' => dirs = vec![(0, -1)],
+                        '^' => dirs = vec![(-1, 0)],
+                        'v' => dirs = vec![(1, 0)],
+                        '>' => dirs = vec![(0, 1)],
+                        _ => unreachable!(),
+                    }
+                }
+            }
+            for (idx, idy) in dirs {
+                let (x, y) = (node.0 as isize + idx, node.1 as isize + idy);
+                if x < 0 || x >= n as isize || y < 0 || y >= m as isize {
+                    continue;
+                }
+                let (mut ux, mut uy) = (x as usize, y as usize);
+                let mut skip_dist = 1;
+                if !part1 {
+                    if skip_list.contains_key(&(node, (idx, idy))) {
+                        ((ux, uy), skip_dist) = *skip_list.get(&(node, (idx, idy))).unwrap();
+                    }
+                }
+                if grid[&(ux, uy)] != '#' && !current_seen.contains_key(&(ux, uy)) {
+                    let mut new_seen = current_seen.clone();
+                    new_seen.insert((ux, uy), true);
+                    let mut new_path = path.clone();
+                    new_path.extend([(ux, uy)]);
+                    S.push_back(((ux, uy), dist + skip_dist as u64, new_path, new_seen));
+                }
+            }
+        }
+        return ans;
+    }
+    // p1 = DFS(&grid, start, end, n, m, true, &skip_list);
+    p2 = DFS(&grid, start, end, n, m, false, &skip_list);
+    Ok((p1, p2))
+}
+
 fn day22() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day22.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -1781,7 +1967,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day22()?);
+    dbg!(day23()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
