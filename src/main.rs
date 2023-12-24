@@ -6,6 +6,59 @@ use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day24() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day24.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let hails = data
+        .lines()
+        .map(|line| {
+            line.split([' ', ',', '@'])
+                .filter(|s| !s.is_empty())
+                .map(|s| s.parse::<i64>().unwrap())
+                .collect_tuple::<(i64, i64, i64, i64, i64, i64)>()
+                .unwrap()
+        })
+        .collect_vec();
+    println!("{:?}", hails);
+    const LOWER_BOUNDARY: i64 = 200_000_000_000_000;
+    // const LOWER_BOUNDARY: i64 = 7;
+    const UPPER_BOUNDARY: i64 = 400_000_000_000_000;
+    // const UPPER_BOUNDARY: i64 = 22;
+
+    for i in 0..hails.len() {
+        for j in i + 1..hails.len() {
+            let mi = hails[i].4 as f64 / hails[i].3 as f64;
+            let mj = hails[j].4 as f64 / hails[j].3 as f64;
+
+            let fi = mi * -hails[i].0 as f64 + hails[i].1 as f64;
+            let fj = mj * -hails[j].0 as f64 + hails[j].1 as f64;
+
+            if mi == mj && fi != fj {
+                continue;
+            } else {
+                let ix = (fj - fi) / (mi - mj);
+                let iy = mi * ix + fi;
+                if (ix > hails[i].0 as f64 && hails[i].3 < 0)
+                    || (ix > hails[j].0 as f64 && hails[j].3 < 0)
+                    || (ix < hails[i].0 as f64 && hails[i].3 > 0)
+                    || (ix < hails[j].0 as f64 && hails[j].3 > 0)
+                {
+                    continue;
+                }
+                println!("{} {} {:?}", i, j, (ix, iy));
+                if ix >= LOWER_BOUNDARY as f64
+                    && ix <= UPPER_BOUNDARY as f64
+                    && iy >= LOWER_BOUNDARY as f64
+                    && iy <= UPPER_BOUNDARY as f64
+                {
+                    p1 += 1;
+                }
+            }
+        }
+    }
+    Ok((p1, p2))
+}
+
 fn day23() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day23.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -1967,7 +2020,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day23()?);
+    dbg!(day24()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
