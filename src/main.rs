@@ -6,6 +6,34 @@ use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::time::Instant;
 use std::{fs, io};
 
+fn day25() -> io::Result<(u64, u64)> {
+    let data = fs::read_to_string("data/day25.in").unwrap();
+    let (mut p1, mut p2) = (0, 0);
+    let mut G: HashMap<String, Vec<String>> = HashMap::new();
+    for line in data.lines() {
+        let origin = line.split(':').nth(0).unwrap();
+        let dest = line
+            .split(':')
+            .nth(1)
+            .unwrap()
+            .split_whitespace()
+            .filter(|x| !x.is_empty())
+            .collect::<Vec<_>>();
+        for v in dest {
+            let dests = G.entry(origin.to_string()).or_insert(Vec::new());
+            if !dests.contains(&v.to_string()) {
+                dests.push(v.to_string());
+            }
+            let other = G.entry(v.to_string()).or_insert(Vec::new());
+            if !other.contains(&origin.to_string()) {
+                other.push(origin.to_string());
+            }
+        }
+    }
+    println!("{:?}", G);
+    Ok((p1, p2))
+}
+
 fn day24() -> io::Result<(u64, u64)> {
     let data = fs::read_to_string("data/day24.in").unwrap();
     let (mut p1, mut p2) = (0, 0);
@@ -2020,7 +2048,7 @@ fn day1() {
 }
 fn main() -> io::Result<()> {
     let now = Instant::now();
-    dbg!(day24()?);
+    dbg!(day25()?);
     println!("Elapsed: {:?}us", now.elapsed().as_millis());
     Ok(())
 }
